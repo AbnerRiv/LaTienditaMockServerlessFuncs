@@ -1,0 +1,22 @@
+{
+  "name": "latienditamockserverlessfuncs",
+  "version": "1.0.0",
+  "description": "Mock Serverless Functions using JSON Server",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "json-server": "^1.0.0-beta.3"
+  },
+  "engines": {
+    "node": "20.x"
+  },
+  "devDependencies": {
+    "netlify-cli": "^18.0.1"
+  }
+}
