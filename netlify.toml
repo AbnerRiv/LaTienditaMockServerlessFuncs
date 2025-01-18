@@ -1,3 +1,5 @@
 [build]
   functions = "netlify-functions"
-  publish = "build"
+
+[[plugins]]
+  package = "@netlify/plugin-functions-core"
