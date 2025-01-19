@@ -1,20 +1,20 @@
-const fs = require('fs');
-const path = require('path');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import { compare } from 'bcryptjs';
+import { sign } from 'jsonwebtoken';
 
 // Definir la ruta del archivo db.json
-const filePath = path.join(__dirname, 'db.json');
+const filePath = join(__dirname, 'db.json');
 
 // Función auxiliar para leer datos desde db.json
 const readData = () => {
-  const data = fs.readFileSync(filePath, 'utf-8');
+  const data = readFileSync(filePath, 'utf-8');
   return JSON.parse(data);
 };
 
 // Compara la contraseña proporcionada con la contraseña cifrada almacenada
 const comparePassword = async (providedPassword, storedPasswordHash) => {
-  return bcrypt.compare(providedPassword, storedPasswordHash);
+  return compare(providedPassword, storedPasswordHash);
 };
 
 // Generar token JWT
@@ -25,12 +25,12 @@ const generateToken = (user) => {
     role: user.role,
   };
   // retorna la clave secreta que debe ser almacenada de manera segura
-  return jwt.sign(payload, 'your_jwt_secret_key', { expiresIn: '1h' });
+  return sign(payload, 'your_jwt_secret_key', { expiresIn: '1h' });
 };
 
 
 // Función que maneja el login
-exports.handler = async (event, context) => {
+export async function handler(event, context) {
   // Lee la data de db.json
   const data = readData();
 
