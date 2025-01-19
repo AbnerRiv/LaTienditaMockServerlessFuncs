@@ -110,8 +110,9 @@ export async function handler(event, context) {
 
         // Cifra la contraseña para guardarla junto a la otra info del usuario
         const hashedPassword = await hashPassword(password);
-        const newUser = { password: hashedPassword, ...requestBody };
-
+        const newUser = { ...requestBody };
+        newUser.password = hashedPassword;
+         
         // Guarda el nuevo usuario
         return db.collection('users').add(newUser)
           .then(() => {
