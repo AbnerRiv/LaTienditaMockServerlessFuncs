@@ -74,15 +74,23 @@ export async function handler(event, context) {
   switch (event.httpMethod) {
     case 'GET':
       // Obtiene los productos
-      return {
-        statusCode: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: JSON.stringify(data.products),
-      };
-      
+      return readData()
+        .then((data) => {
+          return {
+            statusCode: 200,
+            headers: {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*',
+            },
+            body: JSON.stringify(data),  // Regresa la data
+          };
+        })
+        .catch((error) => {
+          return {
+            statusCode: 500,
+            body: JSON.stringify({ message: 'No se obtuvieron los productos', error: error.message }),
+          };
+        });
 
     case 'POST':
       // Crea nuevo producto
