@@ -2,7 +2,6 @@ import admin from 'firebase-admin';
 import dotenv from 'dotenv';
 dotenv.config();
 
-
 const serviceAccount = {
   type: process.env.SERVICE_ACCOUNT_TYPE,
   project_id: process.env.SERVICE_ACCOUNT_PROJECT_ID,
@@ -53,15 +52,17 @@ export async function handler(event, context) {
   // Verifica el metodo http para ejecutar esa accion
   switch (event.httpMethod) {
     case 'GET':
-      const queryParams = event.queryStringParameters || {}; // Capture query parameters from the request
-      const searchTerm = queryParams.search || ''; // If no search term, use an empty string
+      const queryParams = event.queryStringParameters || {}; // query params
+      const searchTerm = queryParams.search || ''; // si no hay search, un empty string
+      const categoryId = queryParams.categoryId || ''; // si no categoryId, un empty string
     
       // funcion para filtrar los productos
       const filterProducts = (products, searchTerm) => {
         return products.filter(product => {
           // el criterio para hacer la busqueda
           return product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                 product.description.toLowerCase().includes(searchTerm.toLowerCase());
+                 product.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                 product.categoryId == categoryId;
         });
       };
     
@@ -75,7 +76,7 @@ export async function handler(event, context) {
               'Content-Type': 'application/json',
               'Access-Control-Allow-Origin': '*',
             },
-            body: JSON.stringify(filteredData), // Return filtered products
+            body: JSON.stringify(filteredData), // returnar los productos filtrados
           };
         })
         .catch(() => {
@@ -159,7 +160,7 @@ export async function handler(event, context) {
       return productDelRef.delete()
       .then(() => {
         return {
-          statusCode: 204,
+          statusCode: 200,
           body: JSON.stringify({ message: 'Producto eliminado' }),
         };
       })

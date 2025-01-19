@@ -1,20 +1,48 @@
-import { readFileSync, writeFileSync } from 'fs';
-import { join } from 'path';
+import admin from 'firebase-admin';
+import dotenv from 'dotenv';
 import { genSalt, hash } from 'bcryptjs';
+dotenv.config();
 
-// Definir la ruta del archivo db.json
-const filePath = join(__dirname, 'db.json');
-
-// Función auxiliar para leer datos desde db.json
-const readData = () => {
-  const data = readFileSync(filePath, 'utf-8');
-  return JSON.parse(data);
+const serviceAccount = {
+  type: process.env.SERVICE_ACCOUNT_TYPE,
+  project_id: process.env.SERVICE_ACCOUNT_PROJECT_ID,
+  private_key_id: process.env.SERVICE_ACCOUNT_PRIVATE_KEY_ID,
+  private_key: process.env.SERVICE_ACCOUNT_PRIVATE_KEY.replace(/\\n/g, '\n'),
+  client_email: process.env.SERVICE_ACCOUNT_CLIENT_EMAIL,
+  client_id: process.env.SERVICE_ACCOUNT_CLIENT_ID,
+  auth_uri: process.env.SERVICE_ACCOUNT_AUTH_URI,
+  token_uri: process.env.SERVICE_ACCOUNT_TOKEN_URI,
+  auth_provider_x509_cert_url: process.env.SERVICE_ACCOUNT_AUTH_PROVIDER_CERT_URL,
+  client_x509_cert_url: process.env.SERVICE_ACCOUNT_CLIENT_CERT_URL,
+  universe_domain: process.env.SERVICE_ACCOUNT_UNIVERSE_DOMAIN
 };
 
-// Función para escribir datos en db.json
-const writeData = (data) => {
-  writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+// inicia la applicacion
+if (!admin.apps.length) {
+  // Inicializa solo si no se ha inicializado
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+} else {
+  // Usa la aplicacion ya inicializada
+  admin.app();
+}
+
+const db = admin.firestore();
+
+// funcion para leer datos de Fire store
+const readData = async () => {
+  const snapshot = await db.collection('users').get();
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 };
+
+// verifica si el usuario existe
+const checkUserExits = async (userRef) => {
+  // Obtiene un posible usuario
+  const userDoc = await userRef.get();
+  
+  return userDoc.exists
+}
 
 // Cifra la contraseña del usuario con bcrypt
 const hashPassword = async (password) => {
@@ -24,8 +52,6 @@ const hashPassword = async (password) => {
 
 // Función que maneja CRUD
 export async function handler(event, context) {
-  // Lee la data de db.json
-  const data = readData();
 
   // obtiene el user ID si lo hay
   const userId = (event.path.split('/').pop() || -1);
@@ -33,70 +59,144 @@ export async function handler(event, context) {
   // Verifica el metodo http para ejecutar esa accion
   switch (event.httpMethod) {
     case 'GET':
-        // Obtiene los usuarios
-        return {
+      const queryParams = event.queryStringParameters || {}; // Captura los query param del request
+      const searchTerm = queryParams.search || ''; // If no search term, use an empty string
+    
+      // funcion para filtrar los usuarios
+      const filterUsers = (users, searchTerm) => {
+        return users.filter(user => {
+          // el criterio para hacer la busqueda
+          return user.username.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                 user.email.toLowerCase().includes(searchTerm.toLowerCase());
+        });
+      };
+    
+      return readData()
+        .then((data) => {
+          const filteredData = filterUsers(data, searchTerm); // filtrar los usuarios basado en el search
+
+          return {
             statusCode: 200,
             headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*',
             },
-            body: JSON.stringify(data.users),
-        };
+            body: JSON.stringify(filteredData),
+          };
+        })
+        .catch(() => {
+          return {
+            statusCode: 500,
+            body: JSON.stringify({ message: 'No se obtuvieron los usuarios'}),
+          };
+        });
 
+    // Crea nuevo usuario
     case 'POST':
-        // Crea nuevo usuario
+        // Obtiene el cuerpo de la solicitud (request body)
         const requestBody = JSON.parse(event.body);
-        const { password } = requestBody;
-        // cifra la constreña para guardarla junto la otra info del usuario
-        const hashedPassword = await hashPassword(password);
+        const { password, username } = requestBody;
 
-        const newUserId = data.users.length ? data.users[data.users.length - 1].id + 1 : 1;
-        const newUser = { id: newUserId, ...requestBody, password: hashedPassword };
-        data.users.push(newUser);
-        writeData(data);
-        return {
-            statusCode: 201,
-            body: JSON.stringify({message: 'Usuario Creado' }),
-        };
+        // Verifica si el usuario ya existe con el username
+        const users = await readData();
+        const existingUser = users.find(user => user.username === username);
+
+        if (existingUser) {
+          return {
+            statusCode: 409,  // usuario ya existe
+            body: JSON.stringify({ message: 'El usuario ya existe' }),
+          };
+        }
+
+        // Cifra la contraseña para guardarla junto a la otra info del usuario
+        const hashedPassword = await hashPassword(password);
+        const newUser = { password: hashedPassword, ...requestBody };
+
+        // Guarda el nuevo usuario
+        return db.collection('users').add(newUser)
+          .then(() => {
+            return {
+              statusCode: 201,  // Usuario creado
+              body: JSON.stringify({ message: 'Registro exitoso' }),
+            };
+          })
+          .catch((error) => {
+            return {
+              statusCode: 500,
+              body: JSON.stringify({ message: 'Error al crear el usuario', error: error.message }),
+            };
+          });
 
     case 'PUT':
         // Actualiza usuario
         const putRequestBody = JSON.parse(event.body);
-        const userIndex = data.users.findIndex((user) => user.id === userId);
-        // en caso de no encontrar el index
-        if (userIndex === -1) {
+
+        // Crea referencia al objeto en la fire store.
+        const userRef = db.collection('users').doc(userId);
+
+        const userExists = await checkUserExits(userRef);
+
+        if (!userExists) {
           return {
             statusCode: 404,
             body: JSON.stringify({ message: 'Usuario no encontrado' }),
           };
         }
-        // Si se proporciona una contraseña, se cifra
-        if (putRequestBody.password) {
-          putRequestBody.password = await hashPassword(putRequestBody.password);
-        }
-        // Actualiza usuario sin sobre escribirlo
-        data.users[userIndex] = { ...data.users[userIndex], ...putRequestBody };
-        writeData(data);
+
+        return userRef.update(putRequestBody)
+        .then(() => {
+          // Obtiene el usuario que se actualizo
+          return userRef.get();
+        })
+        .then((updatedUserDoc) => {
+          return {
+            statusCode: 200,
+            body: JSON.stringify({
+              user: updatedUserDoc.data(),
+              message: 'Usuario actualizado',
+            }),
+          };
+        })
+        .catch(() => {
+          return {
+            statusCode: 500,
+            body: JSON.stringify({ message: 'Error al actualizar el usuario' }),
+          };
+        });
+      
+    // Elimina un usuario
+    case 'DELETE':
+
+      // Crea referencia al objeto en la fire store
+      const userDelRef = db.collection('users').doc(userId);
+      
+      const userDelExists = await checkUserExits(userDelRef);
+
+      if (!userDelExists) {
+        return {
+          statusCode: 404,
+          body: JSON.stringify({ message: 'Usuario no encontrado' }),
+        };
+      }
+
+      return userDelRef.delete()
+      .then(() => {
         return {
           statusCode: 200,
-          body: JSON.stringify({user: data.users[userIndex], message: 'Usuario actualizado' })
+          body: JSON.stringify({ message: 'Usuario eliminado' }),
         };
-      
-
-    case 'DELETE':
-        // Elimina un usuario
-        const userId = event.path.split('/').pop();
-        data.users = data.users.filter((user) => user.id !== userId);
-        writeData(data);
+      })
+      .catch(() => {
         return {
-            statusCode: 204,
-            body: JSON.stringify({ message: 'User deleted' }),
+          statusCode: 500,
+          body: JSON.stringify({ message: 'Error al eliminar el usuario' }),
         };
+      });
 
     default:
       return {
         statusCode: 405,
-        body: JSON.stringify({ message: 'Method Not Allowed' }),
+        body: JSON.stringify({ message: 'Método no permitido' }),
       };
   }
 }
