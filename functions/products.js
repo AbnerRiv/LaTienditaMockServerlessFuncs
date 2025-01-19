@@ -6,7 +6,7 @@ dotenv.config();
 //require('dotenv').config();
 // const fs = require('fs');
 // const path = require('path');
-// const admin = require('firebase-admin');
+//const admin = require('firebase-admin');
 
 
 const serviceAccount = {
@@ -62,6 +62,7 @@ const writeData = async (newData) => {
 };
 
 // Función que maneja CRUD
+//exports.handler = async (event, context) => {
 export async function handler(event, context) {
   // Lee la data de db.json
   const data = readData();
@@ -86,15 +87,23 @@ export async function handler(event, context) {
     case 'POST':
       // Crea nuevo producto
       const requestBody = JSON.parse(event.body);
-      // asigna un ID basandose en el ID del ultimo producto
-      const newProductId = data.products.length ? data.products[data.products.length - 1].id + 1 : 1;
-      const newProduct = { id: newProductId, ...requestBody };
-      data.products.push(newProduct);
-      writeData(data);
-      return {
-        statusCode: 201,
-        body: JSON.stringify({message: 'Producto creado' }),
-      };
+      // Reference to the products collection in Firestore
+      const productsRef = db.collection('products');
+
+      // Add the new product to Firestore
+      productsRef.add(requestBody)
+        .then(() => {
+          return {
+            statusCode: 201,
+            body: JSON.stringify({ message: 'Producto creado' }),
+          };
+        })
+        .catch((error) => {
+          return {
+            statusCode: 500,
+            body: JSON.stringify({ message: 'Error creado el producto', error: error.message }),
+          };
+        });
 
     case 'PUT':
       // Actualiza Productos
