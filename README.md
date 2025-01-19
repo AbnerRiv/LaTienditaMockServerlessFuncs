@@ -11,7 +11,7 @@ Users
 "username": "asdfewere",
 "email": "john.doe@example.com",
 "password": "password132",
-"role": "customer", // only "admin" and "productEditor"
+"role": "customer",
 }
 ```
 
@@ -24,7 +24,7 @@ Products:
 "price": 19.99,
 "stockQuantity": 50,
 "imageUrl": "http://example.com/image.jpg",
-"categoryId": "1", // Reference to ProductCategory and can be nullable
+"categoryId": "1",
 }
 ```
 
