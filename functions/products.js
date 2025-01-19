@@ -67,7 +67,7 @@ export async function handler(event, context) {
 
   //obtiene el product ID si lo hay
   const productId = (event.path.split('/').pop() || -1);
-
+  //////const productId = event.pathParameters.productId;
   // Verifica el metodo http para ejecutar esa accion
   switch (event.httpMethod) {
     case 'GET':
@@ -112,6 +112,10 @@ export async function handler(event, context) {
 
     case 'PUT':
       // Actualiza Productos
+      console.log('Received event:', JSON.stringify(event, null, 2));
+      console.log('Received event:', event);
+      console.log("path:", event.path)
+      console.log("event paramenters:",event.pathParameters)
       const putRequestBody = JSON.parse(event.body);
       
       // Crea referencia al objeto en la fire store.
