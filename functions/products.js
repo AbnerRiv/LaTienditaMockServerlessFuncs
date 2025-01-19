@@ -66,7 +66,7 @@ const writeData = async (newData) => {
 export async function handler(event, context) {
 
   //obtiene el product ID si lo hay
-  const productId = event.pathParameters.productId;
+  const productId = (event.path.split('/').pop() || -1);
 
   // Verifica el metodo http para ejecutar esa accion
   switch (event.httpMethod) {
