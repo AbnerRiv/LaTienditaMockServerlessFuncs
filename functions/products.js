@@ -64,11 +64,9 @@ const writeData = async (newData) => {
 // Función que maneja CRUD
 //exports.handler = async (event, context) => {
 export async function handler(event, context) {
-  // Lee la data de db.json
-  const data = readData();
 
   //obtiene el product ID si lo hay
-  const productId = (event.path.split('/').pop() || -1);
+  const productId = event.pathParameters.productId;
 
   // Verifica el metodo http para ejecutar esa accion
   switch (event.httpMethod) {
@@ -115,22 +113,41 @@ export async function handler(event, context) {
     case 'PUT':
       // Actualiza Productos
       const putRequestBody = JSON.parse(event.body);
-      const productIndex = data.products.findIndex((product) => product.id === productId);
-      // en caso de no encontrar el index
-      if (productIndex === -1) {
-          return {
+      
+      // Crea referencia al objeto en la fire store.
+      const productRef = db.collection('products').doc(productId);
+      
+      // Obtiene un posible producto
+      const productDoc = await productRef.get();
+      
+      // Verifica si es producto existe
+      if (!productDoc.exists) {
+        return {
           statusCode: 404,
           body: JSON.stringify({ message: 'Producto no encontrado' }),
-          };
+        };
       }
-      // Actualiza el producto sin sobre escribirlo
-      data.products[productIndex] = { ...data.products[productIndex], ...putRequestBody };
-      writeData(data);
-      return {
+
+      return productRef.update(putRequestBody)
+      .then(() => {
+        // Obtiene el producto que se actualizo
+        return productRef.get();
+      })
+      .then((updatedProductDoc) => {
+        return {
           statusCode: 200,
-          body: JSON.stringify({product: data.products[productIndex], message: 'Producto actualizado' }),
-      };
-      
+          body: JSON.stringify({
+            product: updatedProductDoc.data(),
+            message: 'Producto actualizado',
+          }),
+        };
+      })
+      .catch((error) => {
+        return {
+          statusCode: 500,
+          body: JSON.stringify({ message: 'Error al actualizar el producto' }),
+        };
+      });
 
     case 'DELETE':
         // Elimina un producto
