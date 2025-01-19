@@ -1,12 +1,6 @@
-// import { readFileSync, writeFileSync } from 'fs';
-// import { join } from 'path';
 import admin from 'firebase-admin';
 import dotenv from 'dotenv';
 dotenv.config();
-//require('dotenv').config();
-// const fs = require('fs');
-// const path = require('path');
-//const admin = require('firebase-admin');
 
 
 const serviceAccount = {
@@ -36,57 +30,58 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
-// Definir la ruta del archivo db.json
-//const filePath = join(__dirname, 'db.json');
-
-// Función auxiliar para leer datos desde db.json
-// const readData = () => {
-//   const data = readFileSync(filePath, 'utf-8');
-//   return JSON.parse(data);
-// };
-
-// Función para escribir datos en db.json
-// const writeData = (data) => {
-//   writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
-// };
-
 // funcion para leer datos de Fire store
 const readData = async () => {
   const snapshot = await db.collection('products').get();
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 };
 
-// funcion para escribir datos en Fire store
-const writeData = async (newData) => {
-  await db.collection('products').add(newData);
-};
+// verifica si el producto existe
+const checkIfProductExits = async (productRef) => {
+  // Obtiene un posible producto
+  const productDoc = await productRef.get();
+
+  return productDoc.exists
+}
 
 // Función que maneja CRUD
-//exports.handler = async (event, context) => {
 export async function handler(event, context) {
 
   //obtiene el product ID si lo hay
   const productId = (event.path.split('/').pop() || -1);
-  //////const productId = event.pathParameters.productId;
+
   // Verifica el metodo http para ejecutar esa accion
   switch (event.httpMethod) {
     case 'GET':
-      // Obtiene los productos
+      const queryParams = event.queryStringParameters || {}; // Capture query parameters from the request
+      const searchTerm = queryParams.search || ''; // If no search term, use an empty string
+    
+      // funcion para filtrar los productos
+      const filterProducts = (products, searchTerm) => {
+        return products.filter(product => {
+          // el criterio para hacer la busqueda
+          return product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                 product.description.toLowerCase().includes(searchTerm.toLowerCase());
+        });
+      };
+    
       return readData()
         .then((data) => {
+          const filteredData = filterProducts(data, searchTerm); // filtrar los productos basado en el search
+
           return {
             statusCode: 200,
             headers: {
               'Content-Type': 'application/json',
               'Access-Control-Allow-Origin': '*',
             },
-            body: JSON.stringify(data),  // Regresa la data
+            body: JSON.stringify(filteredData), // Return filtered products
           };
         })
-        .catch((error) => {
+        .catch(() => {
           return {
             statusCode: 500,
-            body: JSON.stringify({ message: 'No se obtuvieron los productos', error: error.message }),
+            body: JSON.stringify({ message: 'No se obtuvieron los productos'}),
           };
         });
 
@@ -113,24 +108,16 @@ export async function handler(event, context) {
     case 'PUT':
       // Actualiza Productos
       const putRequestBody = JSON.parse(event.body);
-      
+
       // Crea referencia al objeto en la fire store.
       const productRef = db.collection('products').doc(productId);
       
-      // Obtiene un posible producto
-      const productDoc = await productRef.get();
-      
-      // Verifica si es producto existe
-      if (!productDoc.exists) {
+      const productExists = await checkIfProductExits(productRef);
+
+      if (!productExists) {
         return {
           statusCode: 404,
-          body: JSON.stringify({ 
-            message: 'Producto no encontrado',
-            eventJson: JSON.stringify(event, null, 2),
-            event: JSON.stringify(event),
-            eventPath: JSON.stringify(event.path),
-            eventParams: JSON.stringify(event.path.pathParameters)
-        }),
+          body: JSON.stringify({ message: 'Producto no encontrado' }),
         };
       }
 
@@ -148,21 +135,40 @@ export async function handler(event, context) {
           }),
         };
       })
-      .catch((error) => {
+      .catch(() => {
         return {
           statusCode: 500,
           body: JSON.stringify({ message: 'Error al actualizar el producto' }),
         };
       });
 
+    // Elimina un producto
     case 'DELETE':
-        // Elimina un producto
-        data.products = data.products.filter((product) => product.id !== productId);
-        writeData(data);
+      // Crea referencia al objeto en la fire store
+      const productDelRef = db.collection('products').doc(productId);
+      
+      const productDelExists = await checkIfProductExits(productDelRef);
+
+      if (!productDelExists) {
+        return {
+          statusCode: 404,
+          body: JSON.stringify({ message: 'Producto no encontrado' }),
+        };
+      }
+
+      return productDelRef.delete()
+      .then(() => {
         return {
           statusCode: 204,
           body: JSON.stringify({ message: 'Producto eliminado' }),
         };
+      })
+      .catch(() => {
+        return {
+          statusCode: 500,
+          body: JSON.stringify({ message: 'Error al eliminar el producto' }),
+        };
+      });
 
     default:
       return {
