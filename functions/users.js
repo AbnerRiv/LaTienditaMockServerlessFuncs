@@ -3,7 +3,7 @@ import { join } from 'path';
 import { genSalt, hash } from 'bcryptjs';
 
 // Definir la ruta del archivo db.json
-const filePath = join(__dirname, '../db.json');
+const filePath = join(__dirname, 'db.json');
 
 // Función auxiliar para leer datos desde db.json
 const readData = () => {
@@ -92,8 +92,6 @@ export async function handler(event, context) {
             statusCode: 204,
             body: JSON.stringify({ message: 'User deleted' }),
         };
-       
-
 
     default:
       return {

@@ -15,7 +15,6 @@ const writeData = (data) => {
   writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
 };
 
-
 // Función que maneja CRUD
 export async function handler(event, context) {
   // Lee la data de db.json

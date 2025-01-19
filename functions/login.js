@@ -4,7 +4,7 @@ import { compare } from 'bcryptjs';
 import { sign } from 'jsonwebtoken';
 
 // Definir la ruta del archivo db.json
-const filePath = join(__dirname, '../db.json');
+const filePath = join(__dirname, 'db.json');
 
 // Función auxiliar para leer datos desde db.json
 const readData = () => {
