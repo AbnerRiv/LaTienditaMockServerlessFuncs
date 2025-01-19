@@ -91,7 +91,7 @@ export async function handler(event, context) {
       const productsRef = db.collection('products');
 
       // Add the new product to Firestore
-      productsRef.add(requestBody)
+      return productsRef.add(requestBody)
         .then(() => {
           return {
             statusCode: 201,
