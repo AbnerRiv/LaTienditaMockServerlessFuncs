@@ -89,10 +89,8 @@ export async function handler(event, context) {
       const requestBody = JSON.parse(event.body);
       // Reference to the products collection in Firestore
       const productsRef = db.collection('products');
-
-      const result = await productsRef.add(requestBody)
       // Add the new product to Firestore
-      return result
+      return productsRef.add(requestBody)
         .then(() => {
           return {
             statusCode: 201,
