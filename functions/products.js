@@ -1,18 +1,62 @@
-import { readFileSync, writeFileSync } from 'fs';
-import { join } from 'path';
+// import { readFileSync, writeFileSync } from 'fs';
+// import { join } from 'path';
+import admin from 'firebase-admin';
+require('dotenv').config();
+// const fs = require('fs');
+// const path = require('path');
+// const admin = require('firebase-admin');
 
-// Definir la ruta del archivo db.json
-const filePath = join(__dirname, 'db.json');
 
-// Función auxiliar para leer datos desde db.json
-const readData = () => {
-  const data = readFileSync(filePath, 'utf-8');
-  return JSON.parse(data);
+const serviceAccount = {
+  type: process.env.SERVICE_ACCOUNT_TYPE,
+  project_id: process.env.SERVICE_ACCOUNT_PROJECT_ID,
+  private_key_id: process.env.SERVICE_ACCOUNT_PRIVATE_KEY_ID,
+  private_key: process.env.SERVICE_ACCOUNT_PRIVATE_KEY.replace(/\\n/g, '\n'),
+  client_email: process.env.SERVICE_ACCOUNT_CLIENT_EMAIL,
+  client_id: process.env.SERVICE_ACCOUNT_CLIENT_ID,
+  auth_uri: process.env.SERVICE_ACCOUNT_AUTH_URI,
+  token_uri: process.env.SERVICE_ACCOUNT_TOKEN_URI,
+  auth_provider_x509_cert_url: process.env.SERVICE_ACCOUNT_AUTH_PROVIDER_CERT_URL,
+  client_x509_cert_url: process.env.SERVICE_ACCOUNT_CLIENT_CERT_URL,
+  universe_domain: process.env.SERVICE_ACCOUNT_UNIVERSE_DOMAIN
 };
 
+// inicia la applicacion
+if (!admin.apps.length) {
+  // Inicializa solo si no se ha inicializado
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+} else {
+  // Usa la aplicacion ya inicializada
+  admin.app();
+}
+
+const db = admin.firestore();
+
+// Definir la ruta del archivo db.json
+//const filePath = join(__dirname, 'db.json');
+
+// Función auxiliar para leer datos desde db.json
+// const readData = () => {
+//   const data = readFileSync(filePath, 'utf-8');
+//   return JSON.parse(data);
+// };
+
 // Función para escribir datos en db.json
-const writeData = (data) => {
-  writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+// const writeData = (data) => {
+//   writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+// };
+
+// funcion para leer datos de Fire store
+const readData = async () => {
+  const snapshot = await db.collection('products').get();
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+};
+
+// funcion para escribir datos en Fire store
+const writeData = async (newData) => {
+  await db.collection('products').add(newData);
 };
 
 // Función que maneja CRUD
