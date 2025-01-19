@@ -1,22 +1,22 @@
-import { readFileSync, writeFileSync } from 'fs';
-import { join } from 'path';
+const fs = require('fs');
+const path = require('path');
 
 // Definir la ruta del archivo db.json
-const filePath = join(__dirname, 'db.json');
+const filePath = path.join(__dirname, 'db.json');
 
 // Función auxiliar para leer datos desde db.json
 const readData = () => {
-  const data = readFileSync(filePath, 'utf-8');
+  const data = fs.readFileSync(filePath, 'utf-8');
   return JSON.parse(data);
 };
 
 // Función para escribir datos en db.json
 const writeData = (data) => {
-  writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
 };
 
 // Función que maneja CRUD
-export async function handler(event, context) {
+exports.handler = async (event, context) => {
   // Lee la data de db.json
   const data = readData();
 
