@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Definir la ruta del archivo db.json
-const filePath = path.join(__dirname, './db.json');
+const filePath = path.join(__dirname, 'db.json');
 
 // Función auxiliar para leer datos desde db.json
 const readData = () => {
