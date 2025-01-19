@@ -2,28 +2,28 @@
 
 Mock Serverless Functions en Netlify
 
-1) login
+1) login<br>
 POST: devuelve un token jwt para guardar sesion activa
 
-2) users
-GET: obtiene los usuarios creados
-POST: crea o registra un usuario
-PUT: actualiza un usuario existente
-DELETE: elimina un usuario
+2) users<br>
+GET: obtiene los usuarios creados<br>
+POST: crea o registra un usuario<br>
+PUT: actualiza un usuario existente<br>
+DELETE: elimina un usuario<br>
 
-3) products
-GET: obtiene una lista de los productos
-POST: crea un producto
-PUT: actualiza un producto existente
-DELETE: elimina un producto
+3) products<br>
+GET: obtiene una lista de los productos<br>
+POST: crea un producto<br>
+PUT: actualiza un producto existente<br>
+DELETE: elimina un producto<br>
 
-4) categories
-GET: obtiene una lista de categorias creadas
-POST: crea una nueva categoría
-PUT: actualiza una categoría existente
-DELETE: elimina una categoría
+4) categories<br>
+GET: obtiene una lista de categorias creadas<br>
+POST: crea una nueva categoría<br>
+PUT: actualiza una categoría existente<br>
+DELETE: elimina una categoría<br>
 
-Estructura para Usuarios, Productos, y Categorias:
+Estructura para Usuarios, Productos, y Categorias:<br>
 
 Users
 ```json
