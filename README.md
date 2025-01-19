@@ -1,8 +1,29 @@
 # LaTienditaMockServerlessFuncs
 
-Mock Serverless Functions using JSON Server
+Mock Serverless Functions en Netlify
 
-Estructura para Usuarios, Productos, y Categoria:
+1) login
+POST: devuelve un token jwt para guardar sesion activa
+
+2) users
+GET: obtiene los usuarios creados
+POST: crea o registra un usuario
+PUT: actualiza un usuario existente
+DELETE: elimina un usuario
+
+3) products
+GET: obtiene una lista de los productos
+POST: crea un producto
+PUT: actualiza un producto existente
+DELETE: elimina un producto
+
+4) categories
+GET: obtiene una lista de categorias creadas
+POST: crea una nueva categoría
+PUT: actualiza una categoría existente
+DELETE: elimina una categoría
+
+Estructura para Usuarios, Productos, y Categorias:
 
 Users
 ```json
@@ -28,8 +49,7 @@ Products:
 }
 ```
 
-ProductCategories:
-
+Categories:
 ```json
 {
 "id": "1",
