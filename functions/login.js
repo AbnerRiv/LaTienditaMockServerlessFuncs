@@ -1,8 +1,18 @@
-import { readData } from './dbUtils';
+const fs = require('fs');
+const path = require('path');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-// Compare the provided password with the stored hashed password
+// Definir la ruta del archivo db.json
+const filePath = path.join(__dirname, '../db.json');
+
+// Función auxiliar para leer datos desde db.json
+const readData = () => {
+  const data = fs.readFileSync(filePath, 'utf-8');
+  return JSON.parse(data);
+};
+
+// Compara la contraseña proporcionada con la contraseña cifrada almacenada
 const comparePassword = async (providedPassword, storedPasswordHash) => {
   return bcrypt.compare(providedPassword, storedPasswordHash);
 };

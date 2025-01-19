@@ -1,5 +1,20 @@
-import { readData, writeData } from './dbUtils';
+const fs = require('fs');
+const path = require('path');
 const bcrypt = require('bcryptjs');
+
+// Definir la ruta del archivo db.json
+const filePath = path.join(__dirname, '../db.json');
+
+// Función auxiliar para leer datos desde db.json
+const readData = () => {
+  const data = fs.readFileSync(filePath, 'utf-8');
+  return JSON.parse(data);
+};
+
+// Función para escribir datos en db.json
+const writeData = (data) => {
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+};
 
 // Cifra la contraseña del usuario con bcrypt
 const hashPassword = async (password) => {
