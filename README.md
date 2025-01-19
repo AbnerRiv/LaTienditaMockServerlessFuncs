@@ -3,7 +3,9 @@
 Mock Serverless Functions using JSON Server
 
 Estructura para Usuarios, Productos, y Categoria:
+
 Users
+```json
 {
 "id": "1",
 "username": "asdfewere",
@@ -11,8 +13,10 @@ Users
 "password": "password132",
 "role": "customer", // only "admin" and "productEditor"
 }
+```
 
 Products:
+```json
 {
 "id": "1",
 "name": "Sample Product",
@@ -22,10 +26,15 @@ Products:
 "imageUrl": "http://example.com/image.jpg",
 "categoryId": "1", // Reference to ProductCategory and can be nullable
 }
+```
 
 ProductCategories:
+
+```json
 {
 "id": "1",
 "name": "Electronics",
 "description": "Electronics products like phones, laptops, etc.",
 }
+```
+
