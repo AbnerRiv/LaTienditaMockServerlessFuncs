@@ -112,10 +112,6 @@ export async function handler(event, context) {
 
     case 'PUT':
       // Actualiza Productos
-      console.log('Received event:', JSON.stringify(event, null, 2));
-      console.log('Received event:', event);
-      console.log("path:", event.path)
-      console.log("event paramenters:",event.pathParameters)
       const putRequestBody = JSON.parse(event.body);
       
       // Crea referencia al objeto en la fire store.
@@ -128,7 +124,13 @@ export async function handler(event, context) {
       if (!productDoc.exists) {
         return {
           statusCode: 404,
-          body: JSON.stringify({ message: 'Producto no encontrado' }),
+          body: JSON.stringify({ 
+            message: 'Producto no encontrado',
+            eventJson: JSON.stringify(event, null, 2),
+            event: JSON.stringify(event),
+            eventPath: JSON.stringify(event.path),
+            eventParams: JSON.stringify(event.path.pathParameters)
+        }),
         };
       }
 
