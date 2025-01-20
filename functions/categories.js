@@ -60,7 +60,7 @@ export async function handler(event, context) {
       const filterCategories = (categories, searchTerm) => {
         // cuando se manda el id, se quiere solo esa cagetoria
         if(categoryId != -1){
-          return categories.find(category => category.id === categories);
+          return categories.find(category => category.id == categoryId);
         }
 
         return categories.filter(category => {
@@ -80,10 +80,7 @@ export async function handler(event, context) {
               'Content-Type': 'application/json',
               'Access-Control-Allow-Origin': '*',
             },
-            body: JSON.stringify({
-              categories:filteredData, 
-              endOfFunctionPath, 
-              categoryId}), // retornar las categorias filtradas
+            body: JSON.stringify(filteredData), // retornar las categorias filtradas// retornar las categorias filtradas
           };
         })
         .catch(() => {
