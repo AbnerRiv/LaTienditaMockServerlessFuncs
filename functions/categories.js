@@ -57,6 +57,11 @@ export async function handler(event, context) {
     
       // funcion para filtrar las categorias
       const filterCategories = (categories, searchTerm) => {
+        // cuando se manda el id, se quiere solo esa cagetoria
+        if(categoryId !== -1){
+          return categories.find(category => category.id === categoryId);
+        }
+
         return categories.filter(category => {
           // el criterio para hacer la busqueda
           return category.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
