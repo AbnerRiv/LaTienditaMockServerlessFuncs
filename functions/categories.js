@@ -47,8 +47,9 @@ const checkIfCategoryExits = async (categoryRef) => {
 export async function handler(event, context) {
 
   //obtiene el category ID si lo hay
-  const categoryId = (event.path.split('/').pop() || -1);
-
+  let endOfFunctionPath = event.path.split('/').pop()
+  const categoryId = !endOfFunctionPath || endOfFunctionPath == 'categories' ? -1 : endOfFunctionPath;
+  
   // Verifica el metodo http para ejecutar esa accion
   switch (event.httpMethod) {
     case 'GET':
@@ -58,8 +59,8 @@ export async function handler(event, context) {
       // funcion para filtrar las categorias
       const filterCategories = (categories, searchTerm) => {
         // cuando se manda el id, se quiere solo esa cagetoria
-        if(categoryId != -1 || categoryId != 'categories'){
-          return categories.find(category => category.id === categoryId);
+        if(categoryId != -1){
+          return categories.find(category => category.id === categories);
         }
 
         return categories.filter(category => {
@@ -79,7 +80,7 @@ export async function handler(event, context) {
               'Content-Type': 'application/json',
               'Access-Control-Allow-Origin': '*',
             },
-            body: JSON.stringify(filteredData), // retornar las categorias filtradas
+            body: {categories: JSON.stringify(filteredData), endOfFunctionPath, categoryId}, // retornar las categorias filtradas
           };
         })
         .catch(() => {
