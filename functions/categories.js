@@ -80,7 +80,7 @@ export async function handler(event, context) {
               'Content-Type': 'application/json',
               'Access-Control-Allow-Origin': '*',
             },
-            body: {categories: JSON.stringify(filteredData), endOfFunctionPath, categoryId}, // retornar las categorias filtradas
+            body: {categories: JSON.stringify(filteredData), endOfFunctionPath: JSON.stringify(endOfFunctionPath), categoryId: JSON.stringify(categoryId)}, // retornar las categorias filtradas
           };
         })
         .catch(() => {
