@@ -91,7 +91,7 @@ export async function handler(event, context) {
       const requestBody = JSON.parse(event.body);
       // Reference to the products collection in Firestore
       const productsRef = db.collection('products');
-      // Add the new product to Firestore
+      // Agrega el nuevo producto a Firestore
       return productsRef.add(requestBody)
         .then(() => {
           return {
@@ -102,7 +102,7 @@ export async function handler(event, context) {
         .catch((error) => {
           return {
             statusCode: 500,
-            body: JSON.stringify({ message: 'Error creado el producto', error: error.message }),
+            body: JSON.stringify({ message: 'Error creando el producto', error: error.message }),
           };
         });
 

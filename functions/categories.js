@@ -1,24 +1,50 @@
-import { readFileSync, writeFileSync } from 'fs';
-import { join } from 'path';
+import admin from 'firebase-admin';
+import dotenv from 'dotenv';
+dotenv.config();
 
-// Definir la ruta del archivo db.json
-const filePath = join(__dirname, 'db.json');
-
-// Función auxiliar para leer datos desde db.json
-const readData = () => {
-  const data = readFileSync(filePath, 'utf-8');
-  return JSON.parse(data);
+const serviceAccount = {
+  type: process.env.SERVICE_ACCOUNT_TYPE,
+  project_id: process.env.SERVICE_ACCOUNT_PROJECT_ID,
+  private_key_id: process.env.SERVICE_ACCOUNT_PRIVATE_KEY_ID,
+  private_key: process.env.SERVICE_ACCOUNT_PRIVATE_KEY.replace(/\\n/g, '\n'),
+  client_email: process.env.SERVICE_ACCOUNT_CLIENT_EMAIL,
+  client_id: process.env.SERVICE_ACCOUNT_CLIENT_ID,
+  auth_uri: process.env.SERVICE_ACCOUNT_AUTH_URI,
+  token_uri: process.env.SERVICE_ACCOUNT_TOKEN_URI,
+  auth_provider_x509_cert_url: process.env.SERVICE_ACCOUNT_AUTH_PROVIDER_CERT_URL,
+  client_x509_cert_url: process.env.SERVICE_ACCOUNT_CLIENT_CERT_URL,
+  universe_domain: process.env.SERVICE_ACCOUNT_UNIVERSE_DOMAIN
 };
 
-// Función para escribir datos en db.json
-const writeData = (data) => {
-  writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+// inicia la applicacion
+if (!admin.apps.length) {
+  // Inicializa solo si no se ha inicializado
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+} else {
+  // Usa la aplicacion ya inicializada
+  admin.app();
+}
+
+const db = admin.firestore();
+
+// funcion para leer datos de Fire store
+const readData = async () => {
+  const snapshot = await db.collection('categories').get();
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 };
+
+// verifica si la categoria existe
+const checkIfCategoryExits = async (categoryRef) => {
+  // Obtiene una posible categoria
+  const categoryDoc = await categoryRef.get();
+
+  return categoryDoc.exists
+}
 
 // Función que maneja CRUD
 export async function handler(event, context) {
-  // Lee la data de db.json
-  const data = readData();
 
   //obtiene el category ID si lo hay
   const categoryId = (event.path.split('/').pop() || -1);
@@ -26,56 +52,136 @@ export async function handler(event, context) {
   // Verifica el metodo http para ejecutar esa accion
   switch (event.httpMethod) {
     case 'GET':
-      // Obtiene las categorías
-        return {
-          statusCode: 200,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-          },
-          body: JSON.stringify(data.categories)
-        };
+      const queryParams = event.queryStringParameters || {}; // query params
+      const searchTerm = queryParams.search || ''; // si no hay search, un empty string
+    
+      // funcion para filtrar las categorias
+      const filterCategories = (categories, searchTerm) => {
+        return categories.filter(category => {
+          // el criterio para hacer la busqueda
+          return category.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                  category.description.toLowerCase().includes(searchTerm.toLowerCase());
+        });
+      };
+    
+      return readData()
+        .then((data) => {
+          const filteredData = filterCategories(data, searchTerm); // filtrar las categorias basado en el search
+
+          return {
+            statusCode: 200,
+            headers: {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*',
+            },
+            body: JSON.stringify(filteredData), // retornar las categorias filtradas
+          };
+        })
+        .catch(() => {
+          return {
+            statusCode: 500,
+            body: JSON.stringify({ message: 'No se obtuvieron las categorias'}),
+          };
+        });
 
     case 'POST':
-        // Crea nueva categoría
-        const requestBody = JSON.parse(event.body);
-        // asigna un ID basandose en el ID de la ultima categoria
-        const newCategoryId = data.categories.length ? data.categories[data.categories.length - 1].id + 1 : 1;
-        const newCategory = { id: newCategoryId, ...requestBody };
-        data.categories.push(newCategory);
-        writeData(data);
+      // Crea nueva categoria
+      const requestBody = JSON.parse(event.body);
+      const { name } = requestBody;
+      // Referencia las categorias en Firestore
+      const categoriesRef = db.collection('categories');
+
+      // Verifica si la categoria ya existe con el nombre
+      const categories = await readData();
+      const existingCategory = categories.find(category => category.name === name);
+
+      if (existingCategory) {
         return {
-            statusCode: 201,
-            body: JSON.stringify({message: 'Categoría creada' }),
+          statusCode: 409,  // categoria ya existe
+          body: JSON.stringify({ message: 'La categoria ya existe' }),
         };
+      }
+
+      // Agrega la categoria nueva a Firestore
+      return categoriesRef.add(requestBody)
+        .then(() => {
+          return {
+            statusCode: 201,
+            body: JSON.stringify({ message: 'Categoria creada' }),
+          };
+        })
+        .catch((error) => {
+          return {
+            statusCode: 500,
+            body: JSON.stringify({ message: 'Error creando la categoria', error: error.message }),
+          };
+        });
 
     case 'PUT':
-        // Actualiza categorías
-        const putRequestBody = JSON.parse(event.body);
-        const categoryIndex = data.categories.findIndex((category) => category.id === categoryId);
-        // en caso de no encontrar el index
-        if (categoryIndex === -1) {
-            return {
-            statusCode: 404,
-            body: JSON.stringify({ message: 'Categoría no encontrada' }),
-            };
-        }
-        // Actualiza la catoria sin sobre escribirla
-        data.categories[categoryIndex] = { ...data.categories[categoryIndex], ...putRequestBody };
-        writeData(data);
-        return {
-            statusCode: 200,
-            body: JSON.stringify({category: data.categories[categoryIndex], message: 'Categoría actualizada' }),
-        };
+      // Actualiza Categoria
+      const putRequestBody = JSON.parse(event.body);
 
-    case 'DELETE':
-        // Elimina categorías
-        data.categories = data.categories.filter((category) => category.id !== categoryId);
-        writeData(data);
+      // Crea referencia al objeto en Firestore
+      const categoryRef = db.collection('categories').doc(categoryId);
+      
+      // verifica que la categoria exista para actualizarla
+      const categoryExists = await checkIfCategoryExits(categoryRef);
+
+      if (!categoryExists) {
         return {
-          statusCode: 204,
-          body: JSON.stringify({ message: 'Categoría eliminada' }),
+          statusCode: 404,
+          body: JSON.stringify({ message: 'Categoria no encontrada' }),
         };
+      }
+
+      return categoryRef.update(putRequestBody)
+      .then(() => {
+        // Obtiene la categoria que se actualizo
+        return categoryRef.get();
+      })
+      .then((updatedCategoryDoc) => {
+        return {
+          statusCode: 200,
+          body: JSON.stringify({
+            category: updatedCategoryDoc.data(),
+            message: 'Categoria actualizada',
+          }),
+        };
+      })
+      .catch(() => {
+        return {
+          statusCode: 500,
+          body: JSON.stringify({ message: 'Error al actualizar la categoria' }),
+        };
+      });
+
+    // Elimina una categoria
+    case 'DELETE':
+      // Crea referencia al objeto en la fire store
+      const categoryDelRef = db.collection('categories').doc(categoryId);
+      
+      const categoryDelExists = await checkIfCategoryExits(categoryDelRef);
+
+      if (!categoryDelExists) {
+        return {
+          statusCode: 404,
+          body: JSON.stringify({ message: 'Categoria no encontrada' }),
+        };
+      }
+
+      return categoryDelRef.delete()
+      .then(() => {
+        return {
+          statusCode: 200,
+          body: JSON.stringify({ message: 'Categoria eliminada' }),
+        };
+      })
+      .catch(() => {
+        return {
+          statusCode: 500,
+          body: JSON.stringify({ message: 'Error al eliminar la Categoria' }),
+        };
+      });
 
     default:
       return {
