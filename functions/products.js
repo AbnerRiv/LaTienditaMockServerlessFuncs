@@ -30,8 +30,8 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 
 // funcion para leer datos de Fire store
-const readData = async () => {
-  const snapshot = await db.collection('products').get();
+const readData = async (collection = 'products') => {
+  const snapshot = await db.collection(collection).get();
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 };
 
@@ -56,19 +56,34 @@ export async function handler(event, context) {
       const searchTerm = queryParams.search || ''; // si no hay search, un empty string
       const categoryId = queryParams.categoryId || ''; // si no categoryId, un empty string
     
-      // funcion para filtrar los productos
+      // Funcion para filtrar los productos
       const filterProducts = (products, searchTerm) => {
         return products.filter(product => {
-          // el criterio para hacer la busqueda
+          // query params para el filtrado
           return product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                 product.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                 product.categoryId == categoryId;
+                product.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                product.categoryId == categoryId;
         });
       };
-    
-      return readData()
-        .then((data) => {
-          const filteredData = filterProducts(data, searchTerm); // filtrar los productos basado en el search
+
+      // Funcion para agregar el category name a cada producto
+      const enhanceProductsWithCategory = (products, categories) => {
+        return products.map(product => {
+          const category = categories.find(cat => cat.id === product.categoryId);
+          return {
+            ...product,
+            categoryName: category ? category.name : 'Unknown',
+          };
+        });
+      };
+
+      // carga data de las colleciones 'products' y 'categories'
+      return Promise.all([readData(), readData('categories')]) 
+        .then(([products, categories]) => {
+          // filta productos basados en los query params
+          const filteredProducts = filterProducts(products, searchTerm);
+          // agrega el category name a los productos
+          const enhancedProducts = enhanceProductsWithCategory(filteredProducts, categories);
 
           return {
             statusCode: 200,
@@ -76,13 +91,13 @@ export async function handler(event, context) {
               'Content-Type': 'application/json',
               'Access-Control-Allow-Origin': '*',
             },
-            body: JSON.stringify(filteredData), // returnar los productos filtrados
+            body: JSON.stringify(enhancedProducts),
           };
         })
         .catch(() => {
           return {
             statusCode: 500,
-            body: JSON.stringify({ message: 'No se obtuvieron los productos'}),
+            body: JSON.stringify({ message: 'No se obtuvieron los productos' }),
           };
         });
 
